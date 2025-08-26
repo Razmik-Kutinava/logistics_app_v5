@@ -67,7 +67,7 @@ class AuthProvider with ChangeNotifier {
       cleaned = '+$cleaned';
     }
 
-    print('Нормализованный телефон: $cleaned');
+    debugPrint('Нормализованный телефон: $cleaned');
     return cleaned;
   }
 
@@ -93,8 +93,8 @@ class AuthProvider with ChangeNotifier {
       // Имитация API запроса
       await Future.delayed(const Duration(seconds: 1));
 
-      print('AuthProvider: Проверяем телефон: $phone');
-      print('AuthProvider: Доступные телефоны: ${_testCredentials.keys}');
+      debugPrint('AuthProvider: Проверяем телефон: $phone');
+      debugPrint('AuthProvider: Доступные телефоны: ${_testCredentials.keys}');
 
       // Ищем телефон по нормализованному номеру
       String? foundPhone = _findPhoneInCredentials(phone);
@@ -102,9 +102,9 @@ class AuthProvider with ChangeNotifier {
       // Проверяем тестовые данные
       if (foundPhone != null) {
         final userData = _testCredentials[foundPhone]!;
-        print('AuthProvider: Найден пользователь, проверяем пароль');
-        print('AuthProvider: Ожидаемый пароль: ${userData['password']}');
-        print('AuthProvider: Введенный пароль: $password');
+        debugPrint('AuthProvider: Найден пользователь, проверяем пароль');
+        debugPrint('AuthProvider: Ожидаемый пароль: ${userData['password']}');
+        debugPrint('AuthProvider: Введенный пароль: $password');
 
         if (userData['password'] == password) {
           _user = User(
@@ -131,7 +131,6 @@ class AuthProvider with ChangeNotifier {
               licenseExpiryDate: DateTime(2029, 8, 20),
               completedRides: 1247,
               cancelledRides: 23,
-              rating: 4.8,
               workStartDate: DateTime(2021, 5, 10),
               isActive: true,
               receiveNotifications: true,
@@ -150,13 +149,13 @@ class AuthProvider with ChangeNotifier {
 
           _isLoading = false;
           notifyListeners();
-          print('AuthProvider: Вход успешен!');
+          debugPrint('AuthProvider: Вход успешен!');
           return true;
         } else {
-          print('AuthProvider: Неверный пароль');
+          debugPrint('AuthProvider: Неверный пароль');
         }
       } else {
-        print('AuthProvider: Телефон не найден в базе');
+        debugPrint('AuthProvider: Телефон не найден в базе');
       }
 
       _error = 'Неверный номер телефона или пароль';
@@ -216,7 +215,6 @@ class AuthProvider with ChangeNotifier {
           licenseExpiryDate: DateTime(2029, 8, 20),
           completedRides: 1247,
           cancelledRides: 23,
-          rating: 4.8,
           workStartDate: DateTime(2021, 5, 10),
           isActive: true,
           receiveNotifications: true,
@@ -258,19 +256,5 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Получить список доступных тестовых телефонов (для отладки)
-  static List<String> getTestPhones() {
-    return _testCredentials.keys.toList();
-  }
-
-  // Получить тестовый пароль для телефона (для отладки)
-  static String? getTestPassword(String phone) {
-    return _testCredentials[phone]?['password'];
-  }
-
-  // Проверить, является ли пользователь водителем
-  bool get isDriver => _user?.role == 'driver';
-
-  // Проверить, является ли пользователь администратором
-  bool get isAdmin => _user?.role == 'admin';
+  // Методы и геттеры для отладки и ролей удалены как неиспользуемые
 }

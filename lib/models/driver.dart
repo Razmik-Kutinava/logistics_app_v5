@@ -20,7 +20,6 @@ class Driver {
   // Статистика
   final int completedRides;
   final int cancelledRides;
-  final double rating;
   final DateTime workStartDate;
 
   // Настройки
@@ -38,7 +37,6 @@ class Driver {
     required this.phone,
     required this.completedRides,
     required this.cancelledRides,
-    required this.rating,
     required this.workStartDate,
     this.email,
     this.passportNumber,
@@ -80,7 +78,6 @@ class Driver {
       licensePhoto: json['licensePhoto'] as String?,
       completedRides: json['completedRides'] as int? ?? 0,
       cancelledRides: json['cancelledRides'] as int? ?? 0,
-      rating: (json['rating'] as num?)?.toDouble() ?? 5.0,
       workStartDate: DateTime.parse(json['workStartDate'] as String),
       isActive: json['isActive'] as bool? ?? true,
       receiveNotifications: json['receiveNotifications'] as bool? ?? true,
@@ -109,7 +106,6 @@ class Driver {
       'licensePhoto': licensePhoto,
       'completedRides': completedRides,
       'cancelledRides': cancelledRides,
-      'rating': rating,
       'workStartDate': workStartDate.toIso8601String(),
       'isActive': isActive,
       'receiveNotifications': receiveNotifications,
@@ -133,10 +129,6 @@ class Driver {
     } else {
       return '${experience.inDays} дней';
     }
-  }
-
-  String get ratingFormatted {
-    return rating.toStringAsFixed(1);
   }
 
   String get totalRidesText {
@@ -197,7 +189,6 @@ class Driver {
     String? licensePhoto,
     int? completedRides,
     int? cancelledRides,
-    double? rating,
     DateTime? workStartDate,
     bool? isActive,
     bool? receiveNotifications,
@@ -221,7 +212,6 @@ class Driver {
       licensePhoto: licensePhoto ?? this.licensePhoto,
       completedRides: completedRides ?? this.completedRides,
       cancelledRides: cancelledRides ?? this.cancelledRides,
-      rating: rating ?? this.rating,
       workStartDate: workStartDate ?? this.workStartDate,
       isActive: isActive ?? this.isActive,
       receiveNotifications: receiveNotifications ?? this.receiveNotifications,
@@ -231,4 +221,3 @@ class Driver {
     );
   }
 }
-

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logistics_app/models/order.dart';
 import 'package:logistics_app/utils/app_theme.dart';
 import 'package:logistics_app/utils/phone_helper.dart';
@@ -10,6 +11,7 @@ class OrderCard extends StatefulWidget {
   final Function(String, String)? onCompleteOrder;
   final Function(String)? onCallCustomer;
   final Function(Order)? onOpenMap;
+
   final Function(String, String)?
       onUpdateTracking; // Новый callback для обновления трекера
   final Function(String, DeliveryTime)?
@@ -35,13 +37,15 @@ class OrderCard extends StatefulWidget {
 class _OrderCardState extends State<OrderCard> {
   final _pinController = TextEditingController();
   final _trackingController = TextEditingController();
-  bool _showPinField = false;
+  int _callCount = 0;
 
   @override
   void initState() {
     super.initState();
     // Инициализация поля трекера текущим значением
     _trackingController.text = widget.order.trackingNumber ?? '';
+    // Загружаем счетчик звонков для этого заказа
+    _loadCallCount();
   }
 
   @override
@@ -52,7 +56,44 @@ class _OrderCardState extends State<OrderCard> {
   }
 
   Color get _statusColor {
-    return AppTheme.getOrderStatusColor(widget.order.status.toString());
+    if (widget.order.isReturnOrder) {
+      return AppTheme.errorRed; // Красный цвет для возвратов
+    }
+    // Передаём только часть после точки, чтобы совпадали ключи цветов
+    return AppTheme.getOrderStatusColor(
+      widget.order.status.toString().split('.').last,
+    );
+  }
+
+  // Загружаем счетчик звонков для конкретного заказа
+  Future<void> _loadCallCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final count = prefs.getInt('call_count_${widget.order.id}') ?? 0;
+      if (mounted) {
+        setState(() {
+          _callCount = count;
+        });
+      }
+    } catch (e) {
+      debugPrint('Ошибка загрузки счетчика звонков: $e');
+    }
+  }
+
+  // Сохраняем и увеличиваем счетчик звонков
+  Future<void> _incrementCallCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final newCount = _callCount + 1;
+      await prefs.setInt('call_count_${widget.order.id}', newCount);
+      if (mounted) {
+        setState(() {
+          _callCount = newCount;
+        });
+      }
+    } catch (e) {
+      debugPrint('Ошибка сохранения счетчика звонков: $e');
+    }
   }
 
   @override
@@ -91,6 +132,12 @@ class _OrderCardState extends State<OrderCard> {
               if (widget.order.isInProgress) ...[
                 const SizedBox(height: 16),
                 _buildPinField(),
+              ],
+
+              // Информация о возврате для заказов на возврат
+              if (widget.order.isReturnOrder) ...[
+                const SizedBox(height: 16),
+                _buildReturnInfo(),
               ],
             ],
           ),
@@ -633,12 +680,53 @@ class _OrderCardState extends State<OrderCard> {
                       ),
                 ),
               ),
-              IconButton(
-                onPressed: () => PhoneHelper.showContactDialog(
-                  context,
-                  widget.order.customerPhone,
-                  widget.order.customerName,
+              // Счетчик звонков
+              if (_callCount > 0) ...[
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentOrange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppTheme.accentOrange.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.call_made,
+                        size: 14,
+                        color: AppTheme.accentOrange,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_callCount',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.accentOrange,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+              // Кнопка звонка
+              IconButton(
+                onPressed: () async {
+                  // Увеличиваем счетчик при нажатии
+                  await _incrementCallCount();
+                  // Показываем диалог звонка
+                  PhoneHelper.showContactDialog(
+                    context,
+                    widget.order.customerPhone,
+                    widget.order.customerName,
+                  );
+                },
                 icon: Icon(
                   Icons.call,
                   color: AppTheme.statusGreen,
@@ -717,22 +805,29 @@ class _OrderCardState extends State<OrderCard> {
                 size: AppTheme.getIconSize(context, 24),
               ),
               const SizedBox(width: 8),
-              Text(
-                'PIN-код для завершения заказа',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.statusGreen,
-                      fontWeight: FontWeight.bold,
-                      fontSize: AppTheme.getResponsiveFontSize(context, 18),
-                    ),
+              Flexible(
+                child: Text(
+                  widget.order.isReturnOrder
+                      ? 'PIN-код для возврата'
+                      : 'PIN-код для завершения',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppTheme.statusGreen,
+                        fontWeight: FontWeight.bold,
+                        fontSize: AppTheme.getResponsiveFontSize(context, 16),
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Получите PIN-код от клиента и введите его для завершения доставки',
+            widget.order.isReturnOrder
+                ? 'Получите PIN от клиента для завершения возврата'
+                : 'Получите PIN от клиента для завершения',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppTheme.textDark.withOpacity(0.7),
-                  fontSize: AppTheme.getResponsiveFontSize(context, 14),
+                  fontSize: AppTheme.getResponsiveFontSize(context, 13),
                 ),
           ),
           const SizedBox(height: 16),
@@ -747,16 +842,16 @@ class _OrderCardState extends State<OrderCard> {
               FilteringTextInputFormatter.digitsOnly,
             ],
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: AppTheme.getResponsiveFontSize(context, 22),
+                  fontSize: AppTheme.getResponsiveFontSize(context, 20),
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 4,
+                  letterSpacing: 3,
                   color: AppTheme.textDark,
                 ),
             decoration: InputDecoration(
               hintText: '••••••',
               hintStyle: TextStyle(
-                fontSize: AppTheme.getResponsiveFontSize(context, 22),
-                letterSpacing: 4,
+                fontSize: AppTheme.getResponsiveFontSize(context, 20),
+                letterSpacing: 3,
                 color: AppTheme.textDark.withOpacity(0.3),
               ),
               counterText: '',
@@ -781,7 +876,7 @@ class _OrderCardState extends State<OrderCard> {
                 borderSide: BorderSide(color: AppTheme.statusGreen, width: 3),
               ),
               contentPadding:
-                  const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
             ),
           ),
           const SizedBox(height: 20),
@@ -817,7 +912,9 @@ class _OrderCardState extends State<OrderCard> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Завершить доставку',
+                    widget.order.isReturnOrder
+                        ? 'Завершить возврат'
+                        : 'Завершить доставку',
                     style: TextStyle(
                       fontSize: AppTheme.getResponsiveFontSize(context, 18),
                       fontWeight: FontWeight.bold,
@@ -830,5 +927,66 @@ class _OrderCardState extends State<OrderCard> {
         ],
       ),
     );
+  }
+
+  Widget _buildReturnInfo() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.errorRed.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.errorRed.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.warning,
+                color: AppTheme.errorRed,
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'ВОЗВРАТ ЗАКАЗА',
+                style: TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (widget.order.returnReason != null) ...[
+            Text(
+              'Причина: ${widget.order.returnReason}',
+              style: TextStyle(
+                color: AppTheme.textDark,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (widget.order.returnRequestedAt != null) ...[
+            Text(
+              'Запрошен: ${_formatDateTime(widget.order.returnRequestedAt!)}',
+              style: TextStyle(
+                color: AppTheme.textDark.withOpacity(0.7),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    return '${dateTime.day}.${dateTime.month}.${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 }

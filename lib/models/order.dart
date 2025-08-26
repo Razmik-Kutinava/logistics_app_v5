@@ -1,4 +1,4 @@
-enum OrderStatus { pending, confirmed, inTransit, delivered, cancelled }
+enum OrderStatus { pending, confirmed, inTransit, delivered, cancelled, returned }
 
 enum DeliveryTime {
   urgent,     // Срочно (сейчас)
@@ -27,6 +27,9 @@ class Order {
   final String? trackingNumber;
   final String? completionPin;
   final DateTime? completedAt;
+  final bool isReturn;
+  final DateTime? returnRequestedAt;
+  final String? returnReason;
 
   // Новые поля по ТЗ CIO Logistics
   final String dimensions; // Габариты груза
@@ -57,6 +60,9 @@ class Order {
     this.trackingNumber,
     this.completionPin,
     this.completedAt,
+    this.isReturn = false,
+    this.returnRequestedAt,
+    this.returnReason,
     this.qrCode,
     this.latitude,
     this.longitude,
@@ -93,6 +99,11 @@ class Order {
       completedAt: json['completedAt'] != null
           ? DateTime.parse(json['completedAt'] as String)
           : null,
+      isReturn: json['isReturn'] as bool? ?? false,
+      returnRequestedAt: json['returnRequestedAt'] != null
+          ? DateTime.parse(json['returnRequestedAt'] as String)
+          : null,
+      returnReason: json['returnReason'] as String?,
       qrCode: json['qrCode'] as String?,
       latitude: json['latitude'] != null
           ? (json['latitude'] as num).toDouble()
@@ -125,6 +136,9 @@ class Order {
       'trackingNumber': trackingNumber,
       'completionPin': completionPin,
       'completedAt': completedAt?.toIso8601String(),
+      'isReturn': isReturn,
+      'returnRequestedAt': returnRequestedAt?.toIso8601String(),
+      'returnReason': returnReason,
       'qrCode': qrCode,
       'latitude': latitude,
       'longitude': longitude,
@@ -144,6 +158,8 @@ class Order {
         return 'Доставлен';
       case OrderStatus.cancelled:
         return 'Отменен';
+      case OrderStatus.returned:
+        return 'Возврат';
     }
   }
 
@@ -204,12 +220,17 @@ class Order {
 
   // Проверка, в работе ли заказ
   bool get isInProgress {
-    return status == OrderStatus.inTransit;
+    return status == OrderStatus.inTransit || status == OrderStatus.returned;
   }
 
   // Проверка, завершен ли заказ
   bool get isCompleted {
     return status == OrderStatus.delivered || status == OrderStatus.cancelled;
+  }
+
+  // Проверка, возврат ли заказ
+  bool get isReturnOrder {
+    return status == OrderStatus.returned;
   }
 
   // Геттер для координат
@@ -234,6 +255,9 @@ class Order {
     String? trackingNumber,
     String? completionPin,
     DateTime? completedAt,
+    bool? isReturn,
+    DateTime? returnRequestedAt,
+    String? returnReason,
     String? dimensions,
     double? ridePrice,
     String? qrCode,
@@ -259,6 +283,9 @@ class Order {
       trackingNumber: trackingNumber ?? this.trackingNumber,
       completionPin: completionPin ?? this.completionPin,
       completedAt: completedAt ?? this.completedAt,
+      isReturn: isReturn ?? this.isReturn,
+      returnRequestedAt: returnRequestedAt ?? this.returnRequestedAt,
+      returnReason: returnReason ?? this.returnReason,
       dimensions: dimensions ?? this.dimensions,
       ridePrice: ridePrice ?? this.ridePrice,
       qrCode: qrCode ?? this.qrCode,

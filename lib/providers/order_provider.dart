@@ -21,7 +21,8 @@ class OrderProvider with ChangeNotifier {
       .where(
         (order) =>
             order.status == OrderStatus.confirmed ||
-            order.status == OrderStatus.inTransit,
+            order.status == OrderStatus.inTransit ||
+            order.status == OrderStatus.returned,
       )
       .toList();
 
@@ -143,6 +144,30 @@ class OrderProvider with ChangeNotifier {
           longitude: 44.5147,
           priority: 5,
         ),
+        // Тестовый заказ на возврат
+        Order(
+          id: '6',
+          customerName: 'Карен Аветисян',
+          customerPhone: '+37491999888',
+          pickupAddress: 'ул. Арам Хачатуряна, 30, Ереван',
+          deliveryAddress: 'ул. Саят-Нова, 15, Ереван',
+          weight: 2.0,
+          description: 'Возврат товара',
+          status: OrderStatus.returned,
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+          isReturn: true,
+          returnRequestedAt:
+              DateTime.now().subtract(const Duration(minutes: 30)),
+          returnReason: 'Клиент передумал',
+          price: 8000.0,
+          dimensions: '25x20x15 см',
+          ridePrice: 8000.0,
+          trackingNumber: 'CIO006',
+          deliveryTime: DeliveryTime.urgent,
+          latitude: 40.1792,
+          longitude: 44.4991,
+          priority: 0, // Высший приоритет для возвратов
+        ),
       ];
 
       _isLoading = false;
@@ -155,7 +180,7 @@ class OrderProvider with ChangeNotifier {
   }
 
   Future<void> takeOrder(String orderId) async {
-    print('🔄 Взятие заказа $orderId в работу');
+    debugPrint('🔄 Взятие заказа $orderId в работу');
 
     final orderIndex = _orders.indexWhere((order) => order.id == orderId);
     if (orderIndex != -1) {
@@ -165,15 +190,15 @@ class OrderProvider with ChangeNotifier {
         driverName: 'Арам Григорян',
       );
 
-      print('✅ Заказ $orderId взят в работу');
+      debugPrint('✅ Заказ $orderId взят в работу');
       notifyListeners();
     } else {
-      print('❌ Заказ $orderId не найден');
+      debugPrint('❌ Заказ $orderId не найден');
     }
   }
 
   Future<void> completeOrder(String orderId, String pin) async {
-    print('🔄 Завершение заказа $orderId с PIN: $pin');
+    debugPrint('🔄 Завершение заказа $orderId с PIN: $pin');
 
     final orderIndex = _orders.indexWhere((order) => order.id == orderId);
     if (orderIndex != -1) {
@@ -186,19 +211,19 @@ class OrderProvider with ChangeNotifier {
           completedAt: DateTime.now(),
         );
 
-        print('✅ Заказ $orderId успешно завершен');
+        debugPrint('✅ Заказ $orderId успешно завершен');
         await _incrementCompleted(); // Увеличиваем счетчик завершенных
         notifyListeners();
       } else {
-        print('❌ Неверный PIN для заказа $orderId');
+        debugPrint('❌ Неверный PIN для заказа $orderId');
       }
     } else {
-      print('❌ Заказ $orderId не найден');
+      debugPrint('❌ Заказ $orderId не найден');
     }
   }
 
   Future<void> updateOrderStatus(String orderId, OrderStatus status) async {
-    print('🔄 Обновление статуса заказа $orderId на $status');
+    debugPrint('🔄 Обновление статуса заказа $orderId на $status');
 
     final orderIndex = _orders.indexWhere((order) => order.id == orderId);
     if (orderIndex != -1) {
@@ -223,11 +248,11 @@ class OrderProvider with ChangeNotifier {
         await _incrementCancelled();
       }
 
-      print(
+      debugPrint(
           '✅ Статус заказа $orderId изменен с $oldStatus на ${_orders[orderIndex].status}');
       notifyListeners();
     } else {
-      print('❌ Заказ $orderId не найден');
+      debugPrint('❌ Заказ $orderId не найден');
     }
   }
 
@@ -244,7 +269,7 @@ class OrderProvider with ChangeNotifier {
       _orders[orderIndex] =
           _orders[orderIndex].copyWith(trackingNumber: trackingNumber);
       notifyListeners();
-      print('📦 Трекер заказа $orderId обновлен: $trackingNumber');
+      debugPrint('📦 Трекер заказа $orderId обновлен: $trackingNumber');
     }
   }
 
@@ -256,7 +281,7 @@ class OrderProvider with ChangeNotifier {
       _orders[orderIndex] =
           _orders[orderIndex].copyWith(deliveryTime: deliveryTime);
       notifyListeners();
-      print(
+      debugPrint(
           '⏰ Время доставки заказа $orderId обновлено: ${_orders[orderIndex].deliveryTimeText}');
     }
   }
@@ -271,7 +296,7 @@ class OrderProvider with ChangeNotifier {
       );
 
       await _incrementReturned(); // Увеличиваем счетчик возвратов
-      print('🔄 Заказ $orderId возвращен: $reason');
+      debugPrint('🔄 Заказ $orderId возвращен: $reason');
       notifyListeners();
     }
   }
@@ -301,9 +326,9 @@ class OrderProvider with ChangeNotifier {
       _orders.insert(0, newOrder);
       notifyListeners();
 
-      print('✅ Заказ добавлен через QR-код: ${newOrder.id}');
+      debugPrint('✅ Заказ добавлен через QR-код: ${newOrder.id}');
     } catch (e) {
-      print('❌ Ошибка обработки QR-кода: $e');
+      debugPrint('❌ Ошибка обработки QR-кода: $e');
     }
   }
 
@@ -315,8 +340,8 @@ class OrderProvider with ChangeNotifier {
         status: OrderStatus.cancelled,
         completedAt: DateTime.now(),
       );
-      notifyListeners();
-      print('🔄 Заказ $orderId отменён. Причина: $reason');
+      await _incrementCancelled();
+      debugPrint('🔄 Заказ $orderId отменён. Причина: $reason');
     }
   }
 
@@ -343,9 +368,9 @@ class OrderProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
           'order_statistics', _statistics.toJson().toString());
-      print('📊 Статистика сохранена: $_statistics');
+      debugPrint('📊 Статистика сохранена: $_statistics');
     } catch (e) {
-      print('❌ Ошибка сохранения статистики: $e');
+      debugPrint('❌ Ошибка сохранения статистики: $e');
     }
   }
 
@@ -375,10 +400,10 @@ class OrderProvider with ChangeNotifier {
           totalDelivered:
               totalMatch != null ? int.parse(totalMatch.group(1)!) : 0,
         );
-        print('📊 Статистика загружена: $_statistics');
+        debugPrint('📊 Статистика загружена: $_statistics');
       }
     } catch (e) {
-      print('❌ Ошибка загрузки статистики: $e');
+      debugPrint('❌ Ошибка загрузки статистики: $e');
       _statistics = const OrderStatistics();
     }
   }
@@ -416,6 +441,79 @@ class OrderProvider with ChangeNotifier {
     _statistics = const OrderStatistics();
     await _saveStatistics();
     notifyListeners();
-    print('🔄 Статистика обнулена');
+    debugPrint('🔄 Статистика обнулена');
   }
+
+  // Запросить возврат заказа (клиент звонит и просит вернуть)
+  Future<void> requestReturn(String orderId, String reason) async {
+    final orderIndex = _orders.indexWhere((order) => order.id == orderId);
+    if (orderIndex != -1) {
+      final order = _orders[orderIndex];
+      if (order.status == OrderStatus.delivered) {
+        _orders[orderIndex] = order.copyWith(
+          status: OrderStatus.returned,
+          isReturn: true,
+          returnRequestedAt: DateTime.now(),
+          returnReason: reason,
+          // Обнуляем завершение, так как заказ снова в работе
+          completedAt: null,
+          completionPin: null,
+        );
+
+        // Уменьшаем счетчик завершенных (так как заказ снова в работе)
+        if (_statistics.completedOrders > 0) {
+          _statistics = _statistics.copyWith(
+            completedOrders: _statistics.completedOrders - 1,
+            totalDelivered: _statistics.totalDelivered - 1,
+          );
+          await _saveStatistics();
+        }
+
+        notifyListeners();
+        debugPrint('🔄 Запрошен возврат заказа $orderId. Причина: $reason');
+      } else {
+        debugPrint(
+            '❌ Заказ $orderId не может быть возвращен (статус: ${order.status})');
+      }
+    } else {
+      debugPrint('❌ Заказ $orderId не найден');
+    }
+  }
+
+  // Завершить возврат (водитель забрал заказ у клиента)
+  Future<void> completeReturn(String orderId, String pin) async {
+    final orderIndex = _orders.indexWhere((order) => order.id == orderId);
+    if (orderIndex != -1) {
+      final order = _orders[orderIndex];
+      if (order.status == OrderStatus.returned && pin.length == 6) {
+        _orders[orderIndex] = order.copyWith(
+          status: OrderStatus.delivered,
+          completionPin: pin,
+          completedAt: DateTime.now(),
+          // Сохраняем информацию о возврате
+          isReturn: true,
+        );
+
+        // Увеличиваем счетчик возвратов и завершенных заказов
+        await _incrementReturned();
+        await _incrementCompleted();
+
+        debugPrint('✅ Возврат заказа $orderId завершен с PIN: $pin');
+      } else {
+        debugPrint(
+            '❌ Неверный PIN для возврата заказа $orderId или заказ не в статусе возврата');
+      }
+    } else {
+      debugPrint('❌ Заказ $orderId не найден');
+    }
+  }
+
+  // Получить заказы на возврат (только те, что нужно забрать)
+  List<Order> get returnOrders =>
+      _orders.where((order) => order.status == OrderStatus.returned).toList()
+        ..sort((a, b) => (a.returnRequestedAt ?? DateTime.now())
+            .compareTo(b.returnRequestedAt ?? DateTime.now()));
+
+  // Проверить есть ли заказы на возврат
+  bool get hasReturns => returnOrders.isNotEmpty;
 }

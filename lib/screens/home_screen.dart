@@ -87,11 +87,11 @@ class _HomeScreenState extends State<HomeScreen>
                 AppTheme.primaryDarkBlue,
                 AppTheme.darkCardColor,
               ],
-                ),
-              ),
             ),
+          ),
         ),
-        actions: [
+      ),
+      actions: [
         // Статистика заказов
         Consumer<OrderProvider>(
           builder: (context, orderProvider, child) {
@@ -107,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen>
                       Text(
                         'Статистика водителя',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                           fontSize: 16,
                           color: AppTheme.primaryDarkBlue,
                         ),
@@ -124,18 +124,18 @@ class _HomeScreenState extends State<HomeScreen>
                     ],
                   ),
                 ),
-              const PopupMenuItem(
+                const PopupMenuItem(
                   value: 'reset',
-                child: Row(
-                  children: [
+                  child: Row(
+                    children: [
                       Icon(Icons.refresh, color: Colors.red),
                       SizedBox(width: 8),
                       Text('Обнулить статистику',
                           style: TextStyle(color: Colors.red)),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
               onSelected: (value) {
                 if (value == 'reset') {
                   _showResetConfirmation(context, orderProvider);
@@ -153,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-              children: [
+                      children: [
                         Icon(
                           Icons.analytics,
                           size: 18,
@@ -164,13 +164,13 @@ class _HomeScreenState extends State<HomeScreen>
                           '${stats.totalDelivered}',
                           style: TextStyle(
                             color: AppTheme.textLight,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                      ),
-                    ],
                   ),
-                ),
                 ),
               ),
             );
@@ -183,40 +183,50 @@ class _HomeScreenState extends State<HomeScreen>
             Icons.account_circle,
             size: AppTheme.getIconSize(context, 28),
             color: AppTheme.textLight,
-                  ),
-                ),
-              ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildTabBar() {
-    return SliverPersistentHeader(
-      delegate: _TabBarDelegate(
-        TabBar(
-          controller: _tabController,
-          labelColor: AppTheme.accentOrange,
-          unselectedLabelColor: AppTheme.textDark.withOpacity(0.6),
-          indicatorColor: AppTheme.accentOrange,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Roboto',
+    return Consumer<OrderProvider>(
+      builder: (context, orderProvider, child) {
+        final hasReturns = orderProvider.hasReturns;
+
+        return SliverPersistentHeader(
+          delegate: _TabBarDelegate(
+            TabBar(
+              controller: _tabController,
+              labelColor: hasReturns ? AppTheme.errorRed : AppTheme.accentOrange,
+              unselectedLabelColor: AppTheme.textDark.withOpacity(0.6),
+              indicatorColor:
+                  hasReturns ? AppTheme.errorRed : AppTheme.accentOrange,
+              indicatorWeight: 3,
+              indicatorPadding: const EdgeInsets.symmetric(horizontal: 12),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 8),
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Roboto',
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 13,
+                fontFamily: 'Roboto',
+              ),
+              tabs: [
+                _buildTabWithCounter(
+                    'Активные', OrderStatus.pending, OrderStatus.confirmed),
+                _buildTabWithCounter(
+                    'В работе', OrderStatus.inTransit, OrderStatus.returned),
+                _buildTabWithCounter('Завершенные', OrderStatus.delivered,
+                    OrderStatus.cancelled),
+              ],
+            ),
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 15,
-            fontFamily: 'Roboto',
-          ),
-          tabs: [
-            _buildTabWithCounter(
-                'Активные', OrderStatus.pending, OrderStatus.confirmed),
-            _buildTabWithCounter('В работе', OrderStatus.inTransit),
-            _buildTabWithCounter(
-                'Завершенные', OrderStatus.delivered, OrderStatus.cancelled),
-          ],
-        ),
-      ),
-      pinned: true,
+          pinned: true,
+        );
+      },
     );
   }
 
@@ -229,25 +239,40 @@ class _HomeScreenState extends State<HomeScreen>
               (status2 != null && order.status == status2);
         }).length;
 
+        // Определяем есть ли возвраты и это ли вкладка "В работе"
+        final hasReturns = orderProvider.hasReturns;
+        final isInProgressTab = title == 'В работе';
+        final tabColor = (isInProgressTab && hasReturns) 
+            ? AppTheme.errorRed 
+            : AppTheme.accentOrange;
+
         return Tab(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(title),
+              Flexible(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+
+                ),
+              ),
               if (count > 0) ...[
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentOrange,
-                    borderRadius: BorderRadius.circular(12),
+                    color: tabColor,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     '$count',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppTheme.textLight,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -303,10 +328,14 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildInProgressOrdersTab() {
     return Consumer<OrderProvider>(
       builder: (context, orderProvider, child) {
-        final inProgressOrders = orderProvider.orders
-            .where((order) => order.isInProgress)
-            .toList()
-          ..sort((a, b) => a.deliveryPriority.compareTo(b.deliveryPriority));
+        final inProgressOrders =
+            orderProvider.orders.where((order) => order.isInProgress).toList()
+              // Сортируем так, чтобы возвраты были всегда сверху
+              ..sort((a, b) {
+                if (a.isReturnOrder && !b.isReturnOrder) return -1;
+                if (!a.isReturnOrder && b.isReturnOrder) return 1;
+                return a.deliveryPriority.compareTo(b.deliveryPriority);
+              });
 
         if (inProgressOrders.isEmpty) {
           return _buildEmptyState(
@@ -325,7 +354,9 @@ class _HomeScreenState extends State<HomeScreen>
             itemBuilder: (context, index) {
               return OrderCard(
                 order: inProgressOrders[index],
-                onCompleteOrder: (orderId, pin) => _completeOrder(orderId, pin),
+                onCompleteOrder: inProgressOrders[index].isReturnOrder
+                    ? (orderId, pin) => _completeReturn(orderId, pin)
+                    : (orderId, pin) => _completeOrder(orderId, pin),
                 onCallCustomer: (phone) => _callCustomer(phone),
                 onOpenMap: (order) => _openMap(order),
                 onUpdateTracking: (orderId, tracking) =>
@@ -367,6 +398,8 @@ class _HomeScreenState extends State<HomeScreen>
               return OrderCard(
                 order: completedOrders[index],
                 isCompleted: true,
+                onCallCustomer: (phone) => _callCustomer(phone),
+                onOpenMap: (order) => _openMap(order),
                 onUpdateTracking: (orderId, tracking) =>
                     _updateTracking(orderId, tracking),
                 onUpdateDeliveryTime: (orderId, time) =>
@@ -383,31 +416,31 @@ class _HomeScreenState extends State<HomeScreen>
     return Center(
       child: Padding(
         padding: AppTheme.screenPadding,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             Icon(
-                        icon,
+              icon,
               size: 80,
               color: AppTheme.textDark.withOpacity(0.3),
-                      ),
+            ),
             const SizedBox(height: 24),
-                    Text(
+            Text(
               title,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: AppTheme.textDark.withOpacity(0.7),
                   ),
               textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      subtitle,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: AppTheme.textDark.withOpacity(0.5),
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
@@ -463,6 +496,11 @@ class _HomeScreenState extends State<HomeScreen>
     await orderProvider.completeOrder(orderId, pin);
   }
 
+  Future<void> _completeReturn(String orderId, String pin) async {
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    await orderProvider.completeReturn(orderId, pin);
+  }
+
   void _callCustomer(String phone) {
     PhoneHelper.makeCall(phone);
   }
@@ -492,17 +530,17 @@ class _HomeScreenState extends State<HomeScreen>
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-                        children: [
+        children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 8),
-                          Text(
+          Text(
             '$label: ',
             style: TextStyle(
               fontSize: 14,
               color: AppTheme.textDark,
-                                ),
-                          ),
-                          Text(
+            ),
+          ),
+          Text(
             '$value',
             style: TextStyle(
               fontSize: 14,
@@ -572,10 +610,10 @@ class _HomeScreenState extends State<HomeScreen>
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
-          ),
-        ),
-      ],
-    );
+              ),
+            ),
+          ],
+        );
       },
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:logistics_app/providers/auth_provider.dart';
-import 'package:logistics_app/providers/theme_provider.dart';
+import 'package:logistics_app/providers/order_provider.dart';
 import 'package:logistics_app/utils/app_theme.dart';
 import 'package:logistics_app/models/driver.dart';
 
@@ -14,62 +14,31 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  Driver? _currentDriver;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDriverData();
-  }
-
-  void _loadDriverData() {
-    // Демо данные водителя
-    _currentDriver = Driver(
-      id: 'driver_001',
-      fullName: 'Арам Григорян',
-      phone: '+37491123456',
-      email: 'aram.grigoryan@cio-logistics.am',
-      passportNumber: 'AN1234567',
-      passportIssuedBy: 'МВД РА',
-      passportIssuedDate: DateTime(2015, 3, 15),
-      licenseNumber: 'VOD123456',
-      licenseCategory: 'B, C',
-      licenseIssuedDate: DateTime(2014, 8, 20),
-      licenseExpiryDate: DateTime(2029, 8, 20),
-      completedRides: 1247,
-      cancelledRides: 23,
-      rating: 4.8,
-      workStartDate: DateTime(2021, 5, 10),
-      isActive: true,
-      receiveNotifications: true,
-      isOnline: true,
-      lastActiveAt: DateTime.now(),
-    );
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: true);
+    final Driver? driver = authProvider.driver;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       appBar: _buildAppBar(),
-      body: _currentDriver == null
+      body: driver == null
           ? _buildLoadingState()
           : SingleChildScrollView(
               padding: AppTheme.screenPadding,
               child: Column(
                 children: [
-                  _buildProfileHeader(),
+                  _buildProfileHeader(driver),
                   const SizedBox(height: 24),
                   _buildStatisticsCards(),
                   const SizedBox(height: 24),
-                  _buildPersonalInfo(),
+                  _buildPersonalInfo(driver),
                   const SizedBox(height: 24),
-                  _buildDocuments(),
-                  const SizedBox(height: 24),
-                  _buildSettings(),
+                  _buildDocuments(driver),
                   const SizedBox(height: 24),
                   _buildLogoutButton(),
+                  const SizedBox(height: 16),
+                  _buildResetStatisticsButton(),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -113,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(Driver driver) {
     return Container(
       padding: AppTheme.cardPadding,
       decoration: BoxDecoration(
@@ -149,9 +118,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             child: ClipOval(
-              child: _currentDriver!.profilePhoto != null
+              child: driver.profilePhoto != null
                   ? Image.network(
-                      _currentDriver!.profilePhoto!,
+                      driver.profilePhoto!,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
                           _buildDefaultAvatar(),
@@ -164,7 +133,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Имя
           Text(
-            _currentDriver!.fullName,
+            driver.fullName,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: AppTheme.textLight,
                   fontWeight: FontWeight.bold,
@@ -178,7 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: _currentDriver!.isOnline
+              color: driver.isOnline
                   ? AppTheme.statusGreen
                   : AppTheme.completedGray,
               borderRadius: BorderRadius.circular(20),
@@ -187,13 +156,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  _currentDriver!.isOnline ? Icons.circle : Icons.offline_bolt,
+                  driver.isOnline ? Icons.circle : Icons.offline_bolt,
                   size: 16,
                   color: AppTheme.textLight,
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _currentDriver!.statusText,
+                  driver.statusText,
                   style: TextStyle(
                     color: AppTheme.textLight,
                     fontSize: 16,
@@ -206,19 +175,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const SizedBox(height: 16),
 
-          // Опыт работы и рейтинг
+          // Опыт работы
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildHeaderStat(
-                  'Опыт', _currentDriver!.experienceText, Icons.work),
-              Container(
-                width: 1,
-                height: 40,
-                color: AppTheme.textLight.withOpacity(0.3),
-              ),
-              _buildHeaderStat(
-                  'Рейтинг', _currentDriver!.ratingFormatted, Icons.star),
+                  'Опыт работы', driver.experienceText, Icons.work),
             ],
           ),
         ],
@@ -266,35 +228,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildStatisticsCards() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            'Завершено',
-            '${_currentDriver!.completedRides}',
-            Icons.check_circle,
-            AppTheme.statusGreen,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            'Возвратов',
-            '${_currentDriver!.cancelledRides}',
-            Icons.cancel,
-            AppTheme.errorRed,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            'Успешность',
-            _currentDriver!.successRateText,
-            Icons.trending_up,
-            AppTheme.accentOrange,
-          ),
-        ),
-      ],
+    return Consumer<OrderProvider>(
+      builder: (context, orderProvider, child) {
+        final stats = orderProvider.statistics;
+        final totalOrders = stats.completedOrders + stats.cancelledOrders;
+        final successRate = totalOrders > 0
+            ? ((stats.completedOrders / totalOrders) * 100).round()
+            : 0;
+
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                'Завершено',
+                '${stats.completedOrders}',
+                Icons.check_circle,
+                AppTheme.statusGreen,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Отменено',
+                '${stats.cancelledOrders}',
+                Icons.cancel,
+                AppTheme.errorRed,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Успешность',
+                '$successRate%',
+                Icons.trending_up,
+                AppTheme.accentOrange,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -337,20 +309,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPersonalInfo() {
+  Widget _buildPersonalInfo(Driver driver) {
     return _buildSection(
       'Личные данные',
       Icons.person,
       [
-        _buildInfoRow('ФИО', _currentDriver!.fullName),
-        _buildInfoRow('Телефон', _currentDriver!.phoneFormatted),
-        if (_currentDriver!.email != null)
-          _buildInfoRow('Email', _currentDriver!.email!),
+        _buildInfoRow('ФИО', driver.fullName),
+        _buildInfoRow('Телефон', driver.phoneFormatted),
+        if (driver.email != null) _buildInfoRow('Email', driver.email!),
       ],
     );
   }
 
-  Widget _buildDocuments() {
+  Widget _buildDocuments(Driver driver) {
     return Column(
       children: [
         // Паспортные данные
@@ -358,14 +329,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'Паспортные данные',
           Icons.credit_card,
           [
-            if (_currentDriver!.passportNumber != null)
-              _buildInfoRow('Номер', _currentDriver!.passportNumber!),
-            if (_currentDriver!.passportIssuedBy != null)
-              _buildInfoRow('Выдан', _currentDriver!.passportIssuedBy!),
-            if (_currentDriver!.passportIssuedDate != null)
+            if (driver.passportNumber != null)
+              _buildInfoRow('Номер', driver.passportNumber!),
+            if (driver.passportIssuedBy != null)
+              _buildInfoRow('Выдан', driver.passportIssuedBy!),
+            if (driver.passportIssuedDate != null)
               _buildInfoRow(
                 'Дата выдачи',
-                '${_currentDriver!.passportIssuedDate!.day}.${_currentDriver!.passportIssuedDate!.month}.${_currentDriver!.passportIssuedDate!.year}',
+                '${driver.passportIssuedDate!.day}.${driver.passportIssuedDate!.month}.${driver.passportIssuedDate!.year}',
               ),
           ],
         ),
@@ -377,15 +348,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'Водительские права',
           Icons.directions_car,
           [
-            if (_currentDriver!.licenseNumber != null)
-              _buildInfoRow('Номер', _currentDriver!.licenseNumber!),
-            if (_currentDriver!.licenseCategory != null)
-              _buildInfoRow('Категория', _currentDriver!.licenseCategory!),
-            if (_currentDriver!.licenseExpiryDate != null)
+            if (driver.licenseNumber != null)
+              _buildInfoRow('Номер', driver.licenseNumber!),
+            if (driver.licenseCategory != null)
+              _buildInfoRow('Категория', driver.licenseCategory!),
+            if (driver.licenseExpiryDate != null)
               _buildInfoRow(
                 'Действительны до',
-                '${_currentDriver!.licenseExpiryDate!.day}.${_currentDriver!.licenseExpiryDate!.month}.${_currentDriver!.licenseExpiryDate!.year}',
-                isValid: _currentDriver!.isLicenseValid,
+                '${driver.licenseExpiryDate!.day}.${driver.licenseExpiryDate!.month}.${driver.licenseExpiryDate!.year}',
+                isValid: driver.isLicenseValid,
               ),
           ],
         ),
@@ -480,54 +451,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSettings() {
-    return _buildSection(
-      'Настройки',
-      Icons.settings,
-      [
-        Consumer<ThemeProvider>(
-          builder: (context, themeProvider, child) {
-            return _buildSwitchRow(
-              'Темная тема',
-              themeProvider.isDarkMode,
-              (value) => themeProvider.toggleTheme(),
-            );
-          },
-        ),
-        _buildSwitchRow(
-          'Push-уведомления',
-          _currentDriver!.receiveNotifications,
-          (value) {
-            // TODO: Обновить настройки уведомлений
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSwitchRow(String label, bool value, Function(bool) onChanged) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppTheme.accentOrange,
-            activeTrackColor: AppTheme.accentOrange.withOpacity(0.3),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildLogoutButton() {
     return SizedBox(
       width: double.infinity,
@@ -556,6 +479,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildResetStatisticsButton() {
+    return Consumer<OrderProvider>(
+      builder: (context, orderProvider, child) {
+        final stats = orderProvider.statistics;
+        final hasData = stats.completedOrders > 0 ||
+            stats.cancelledOrders > 0 ||
+            stats.returnedOrders > 0;
+
+        return SizedBox(
+          width: double.infinity,
+          height: AppTheme.getButtonHeight(context),
+          child: OutlinedButton(
+            onPressed: hasData ? () => _showResetStatisticsDialog() : null,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.accentOrange,
+              side: BorderSide(
+                  color: hasData
+                      ? AppTheme.accentOrange
+                      : AppTheme.accentOrange.withOpacity(0.3),
+                  width: 2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.refresh,
+                  size: AppTheme.getIconSize(context, 24),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Сбросить статистику',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: hasData
+                            ? AppTheme.accentOrange
+                            : AppTheme.accentOrange.withOpacity(0.3),
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -610,6 +579,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: AppTheme.errorRed,
             ),
             child: Text('Выйти'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetStatisticsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: AppTheme.accentOrange),
+            const SizedBox(width: 8),
+            Text('Сброс статистики'),
+          ],
+        ),
+        content: Text(
+          'Вы уверены, что хотите сбросить всю статистику заказов?\n\nЭто действие нельзя отменить.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Отмена'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final orderProvider =
+                  Provider.of<OrderProvider>(context, listen: false);
+              await orderProvider.resetStatistics();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Статистика сброшена'),
+                    backgroundColor: AppTheme.statusGreen,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accentOrange,
+            ),
+            child: Text('Сбросить'),
           ),
         ],
       ),

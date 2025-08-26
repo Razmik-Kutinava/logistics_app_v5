@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:logistics_app/providers/auth_provider.dart';
 import 'package:logistics_app/providers/order_provider.dart';
-import 'package:logistics_app/providers/theme_provider.dart';
 
 import 'package:logistics_app/screens/home_screen.dart';
 import 'package:logistics_app/screens/login_screen.dart';
@@ -24,21 +23,14 @@ class LogisticsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return MaterialApp.router(
-            title: 'Logistics App - Для водителей',
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeProvider.themeMode,
-            routerConfig: _router,
-            debugShowCheckedModeBanner: false,
-          );
-        },
+      child: MaterialApp.router(
+        title: 'Logistics App - Для водителей',
+        theme: AppTheme.lightTheme,
+        routerConfig: _router,
+        debugShowCheckedModeBanner: false,
       ),
     );
   }
