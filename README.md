@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-# logistics_app_v5
-=======
+
 # CIO Logistics - Приложение для водителей
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
@@ -251,4 +249,4 @@ lib/
 - Изменения статусов заказов
 - Важные сообщения от диспетчера
 - Напоминания о документах
->>>>>>> bf09350 (Initial commit)
+
