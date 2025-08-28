@@ -198,7 +198,8 @@ class _HomeScreenState extends State<HomeScreen>
           delegate: _TabBarDelegate(
             TabBar(
               controller: _tabController,
-              labelColor: hasReturns ? AppTheme.errorRed : AppTheme.accentOrange,
+              labelColor:
+                  hasReturns ? AppTheme.errorRed : AppTheme.accentOrange,
               unselectedLabelColor: AppTheme.textDark.withOpacity(0.6),
               indicatorColor:
                   hasReturns ? AppTheme.errorRed : AppTheme.accentOrange,
@@ -242,8 +243,8 @@ class _HomeScreenState extends State<HomeScreen>
         // Определяем есть ли возвраты и это ли вкладка "В работе"
         final hasReturns = orderProvider.hasReturns;
         final isInProgressTab = title == 'В работе';
-        final tabColor = (isInProgressTab && hasReturns) 
-            ? AppTheme.errorRed 
+        final tabColor = (isInProgressTab && hasReturns)
+            ? AppTheme.errorRed
             : AppTheme.accentOrange;
 
         return Tab(
@@ -256,7 +257,6 @@ class _HomeScreenState extends State<HomeScreen>
                   title,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-
                 ),
               ),
               if (count > 0) ...[
@@ -472,12 +472,7 @@ class _HomeScreenState extends State<HomeScreen>
       onTap: (index) {
         if (index == 1) {
           // Открыть карту
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Карта маршрутов - в разработке'),
-              backgroundColor: AppTheme.accentOrange,
-            ),
-          );
+          context.go('/map');
         } else if (index == 2) {
           // Открыть QR-сканер
           context.go('/qr-scanner');

@@ -10,6 +10,8 @@ import 'package:logistics_app/screens/orders_screen.dart';
 import 'package:logistics_app/screens/profile_screen.dart';
 import 'package:logistics_app/screens/splash_screen.dart';
 import 'package:logistics_app/screens/qr_scanner_screen.dart';
+import 'package:logistics_app/screens/map_screen.dart';
+import 'package:logistics_app/screens/debug_map_screen.dart';
 import 'package:logistics_app/utils/app_theme.dart';
 
 void main() {
@@ -48,5 +50,7 @@ final GoRouter _router = GoRouter(
     GoRoute(
         path: '/qr-scanner',
         builder: (context, state) => const QRScannerScreen()),
+    GoRoute(path: '/map', builder: (context, state) => const DebugMapScreen()),
+    GoRoute(path: '/map-full', builder: (context, state) => const MapScreen()),
   ],
 );
